@@ -1,0 +1,29 @@
+[
+  {
+    "id": "email-001",
+    "sender": "Alex Chen",
+    "subject": "Confirm A1 product proposal",
+    "body": "Can you review the AI assistant product proposal and confirm by 15:00 today?",
+    "deadline": "15:00",
+    "priority": "high",
+    "unread": true
+  },
+  {
+    "id": "email-002",
+    "sender": "Mina Wu",
+    "subject": "Lunch tomorrow",
+    "body": "Are you free for lunch tomorrow?",
+    "deadline": "tomorrow",
+    "priority": "low",
+    "unread": true
+  },
+  {
+    "id": "email-003",
+    "sender": "Calendar Bot",
+    "subject": "Weekly sync reminder",
+    "body": "Reminder: weekly sync starts at 14:30.",
+    "deadline": "14:30",
+    "priority": "medium",
+    "unread": false
+  }
+]

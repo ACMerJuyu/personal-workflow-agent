@@ -1,0 +1,10 @@
+{
+  "today": "2026-05-14",
+  "timezone": "Asia/Shanghai",
+  "working_hours": {
+    "start": "09:30",
+    "end": "18:30"
+  },
+  "reply_tone": "friendly",
+  "priority_rule": "Emails with explicit same-day deadline are high priority."
+}

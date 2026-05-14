@@ -1,0 +1,23 @@
+[
+  {
+    "id": "event-001",
+    "title": "Deep Work",
+    "date": "2026-05-14",
+    "start": "14:30",
+    "end": "15:30"
+  },
+  {
+    "id": "event-002",
+    "title": "Proposal Review",
+    "date": "2026-05-14",
+    "start": "15:00",
+    "end": "15:45"
+  },
+  {
+    "id": "event-003",
+    "title": "Evening Study",
+    "date": "2026-05-14",
+    "start": "20:00",
+    "end": "21:30"
+  }
+]
