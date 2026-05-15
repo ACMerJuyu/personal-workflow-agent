@@ -16,6 +16,9 @@ def main():
     plan_parser = subparsers.add_parser("plan", help="Run the agent on a user goal")
     plan_parser.add_argument("goal", help="User goal")
 
+    chat_parser = subparsers.add_parser("chat", help="Chat with the workflow agent")
+    chat_parser.add_argument("message", help="Natural language message")
+
     args = parser.parse_args()
     agent = WorkflowAgent()
 
@@ -27,8 +30,10 @@ def main():
         result = agent.open_todos()
     elif args.command == "calendar":
         result = agent.today_calendar()
-    else:
+    elif args.command == "plan":
         result = agent.run(args.goal)
+    else:
+        result = agent.chat(args.message)
 
     print(result.to_text())
     print("\nTool Trace")

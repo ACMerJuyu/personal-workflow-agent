@@ -73,6 +73,10 @@ python app.py emails
 python app.py calendar
 python app.py todos
 python app.py plan "Help me prepare for today's important work"
+python app.py chat "今天有没有日程冲突？"
+python app.py chat "我有哪些未完成任务？"
+python app.py chat "完成 todo 1"
+python app.py chat "把 event-001 改到 16:00-17:00"
 ```
 
 Run tests:
@@ -92,6 +96,28 @@ The agent follows a simple loop:
 5. Return a human-readable brief and structured trace
 
 The current implementation is deterministic and rule-based. This makes it easy to test. A future version can replace the planner with an LLM while keeping the same tool layer.
+
+## Conversational Router
+
+The project includes a lightweight intent router for simple natural-language commands.
+
+Supported intents:
+
+| Intent | Example |
+| --- | --- |
+| `morning_brief` | `今天有什么重要事情？` |
+| `important_emails` | `有没有重要邮件？` |
+| `today_calendar` | `今天有什么安排？` |
+| `open_todos` | `我有哪些未完成任务？` |
+| `calendar_conflicts` | `今天有没有日程冲突？` |
+| `complete_todo` | `完成 todo 1` |
+| `reschedule_event` | `把 event-001 改到 16:00-17:00` |
+
+This is intentionally rule-based for now. It teaches the same core pattern as LLM tool calling:
+
+```text
+message -> intent -> parameter extraction -> tool call -> observation -> response
+```
 
 ## Tools
 
