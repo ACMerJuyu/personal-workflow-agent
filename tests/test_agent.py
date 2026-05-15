@@ -65,8 +65,29 @@ class WorkflowAgentTest(unittest.TestCase):
         self.assertIn("Important email from Alex Chen", text)
         self.assertIn("Calendar conflict detected", text)
         self.assertGreaterEqual(len(result.trace), 5)
+        tool_names = [call.name for call in result.trace]
+        self.assertIn("list_todos", tool_names)
+
+    def test_daily_brief_lists_open_todos(self):
+        data_dir = Path(self.temp_dir.name)
+        (data_dir / "todos.json").write_text(
+            json.dumps(
+                [
+                    {
+                        "id": 1,
+                        "title": "Read morning inbox",
+                        "due": "09:30",
+                        "source": "manual",
+                        "priority": "medium",
+                        "done": False,
+                    }
+                ]
+            ),
+            encoding="utf-8",
+        )
+        result = self.agent.daily_brief()
+        self.assertIn("Open todos: Read morning inbox.", result.to_text())
 
 
 if __name__ == "__main__":
     unittest.main()
-

@@ -1,1 +1,18 @@
-[]
+[
+  {
+    "id": 1,
+    "title": "Review yesterday's agent notes",
+    "due": "10:00",
+    "source": "manual",
+    "priority": "medium",
+    "done": false
+  },
+  {
+    "id": 2,
+    "title": "Push portfolio updates to GitHub",
+    "due": "18:00",
+    "source": "manual",
+    "priority": "low",
+    "done": false
+  }
+]

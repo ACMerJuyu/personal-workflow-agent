@@ -10,6 +10,8 @@ def main():
 
     subparsers.add_parser("brief", help="Generate today's daily brief")
     subparsers.add_parser("emails", help="Show important emails")
+    subparsers.add_parser("todos", help="Show open todos")
+    subparsers.add_parser("calendar", help="Show today's calendar events")
 
     plan_parser = subparsers.add_parser("plan", help="Run the agent on a user goal")
     plan_parser.add_argument("goal", help="User goal")
@@ -21,6 +23,10 @@ def main():
         result = agent.daily_brief()
     elif args.command == "emails":
         result = agent.important_emails()
+    elif args.command == "todos":
+        result = agent.open_todos()
+    elif args.command == "calendar":
+        result = agent.today_calendar()
     else:
         result = agent.run(args.goal)
 
@@ -31,4 +37,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

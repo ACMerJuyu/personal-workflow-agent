@@ -70,6 +70,8 @@ personal-workflow-agent/
 ```bash
 python app.py brief
 python app.py emails
+python app.py calendar
+python app.py todos
 python app.py plan "Help me prepare for today's important work"
 ```
 
@@ -96,11 +98,32 @@ The current implementation is deterministic and rule-based. This makes it easy t
 | Tool | Purpose |
 | --- | --- |
 | `search_email` | Find emails by sender, keyword, priority, or unread status |
+| `get_email_by_id` | Read one exact email by id |
 | `list_calendar_events` | Read today's calendar |
 | `detect_calendar_conflicts` | Find overlapping events |
+| `reschedule_event` | Move an event to a new time range |
+| `list_todos` | Read open or completed todos |
 | `add_todo` | Add a task to the todo list |
+| `complete_todo` | Mark a todo as done |
 | `draft_reply` | Generate a reply draft |
 | `daily_brief` | Summarize important work items |
+
+## Morning Workflow
+
+The main portfolio scenario is a morning assistant flow:
+
+```text
+1. Load user memory and today's date
+2. Check high-priority unread emails
+3. Read today's calendar
+4. List open todos
+5. Detect calendar conflicts
+6. Create a todo from urgent email
+7. Draft a reply
+8. Return a concise daily brief with tool trace
+```
+
+This maps directly to the personal assistant use case: "Every morning, help me check email, calendar, and tasks."
 
 ## Roadmap
 
@@ -120,4 +143,3 @@ This project is intentionally small but complete. It shows:
 - State management
 - Testing discipline
 - Clear README and runnable demo
-

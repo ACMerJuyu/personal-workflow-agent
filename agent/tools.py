@@ -33,6 +33,13 @@ class WorkflowTools:
 
         return results
 
+    def get_email_by_id(self, email_id: str) -> Dict[str, Any]:
+        emails = self._read_json("emails.json")
+        for email in emails:
+            if email["id"] == email_id:
+                return email
+        raise ValueError(f"email not found: {email_id}")
+
     def list_calendar_events(self, date: Optional[str] = None) -> List[Dict[str, Any]]:
         events = self._read_json("calendar.json")
         if date is None:
@@ -57,6 +64,33 @@ class WorkflowTools:
 
         return conflicts
 
+    def reschedule_event(self, event_id: str, new_start: str, new_end: str) -> Dict[str, Any]:
+        events = self._read_json("calendar.json")
+        for event in events:
+            if event["id"] == event_id:
+                event["start"] = new_start
+                event["end"] = new_end
+                self._write_json("calendar.json", events)
+                return event
+        raise ValueError(f"calendar event not found: {event_id}")
+
+    def list_todos(
+        self,
+        include_done: bool = False,
+        priority: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        todos = self._read_json("todos.json")
+        results = []
+
+        for todo in todos:
+            if not include_done and todo.get("done", False):
+                continue
+            if priority and todo.get("priority") != priority:
+                continue
+            results.append(todo)
+
+        return results
+
     def add_todo(self, title: str, due: str, source: str, priority: str = "medium") -> Dict[str, Any]:
         todos = self._read_json("todos.json")
         todo = {
@@ -70,6 +104,15 @@ class WorkflowTools:
         todos.append(todo)
         self._write_json("todos.json", todos)
         return todo
+
+    def complete_todo(self, todo_id: int) -> Dict[str, Any]:
+        todos = self._read_json("todos.json")
+        for todo in todos:
+            if todo["id"] == todo_id:
+                todo["done"] = True
+                self._write_json("todos.json", todos)
+                return todo
+        raise ValueError(f"todo not found: {todo_id}")
 
     def draft_reply(self, email: Dict[str, Any], tone: str = "concise") -> Dict[str, str]:
         greeting_name = email["sender"].split()[0]
@@ -103,4 +146,3 @@ class WorkflowTools:
     def _to_minutes(value: str) -> int:
         parsed = datetime.strptime(value, "%H:%M")
         return parsed.hour * 60 + parsed.minute
-

@@ -32,11 +32,39 @@ class WorkflowAgent:
 
         return AgentResult("Important Emails", bullets, self.trace)
 
+    def open_todos(self) -> AgentResult:
+        self.trace = []
+        todos = self._call("list_todos", {"include_done": False})
+
+        if not todos:
+            return AgentResult("Open Todos", ["No open todo found."], self.trace)
+
+        bullets = [
+            f"{todo['title']} due {todo['due']} priority {todo['priority']}."
+            for todo in todos
+        ]
+        return AgentResult("Open Todos", bullets, self.trace)
+
+    def today_calendar(self) -> AgentResult:
+        self.trace = []
+        memory = self._call("load_memory", {})
+        events = self._call("list_calendar_events", {"date": memory["today"]})
+
+        if not events:
+            return AgentResult("Today's Calendar", ["No calendar event found today."], self.trace)
+
+        bullets = [
+            f"{event['start']}-{event['end']} {event['title']}"
+            for event in events
+        ]
+        return AgentResult("Today's Calendar", bullets, self.trace)
+
     def daily_brief(self) -> AgentResult:
         self.trace = []
         memory = self._call("load_memory", {})
         important_emails = self._call("search_email", {"unread_only": True, "priority": "high"})
         events = self._call("list_calendar_events", {"date": memory["today"]})
+        todos = self._call("list_todos", {"include_done": False})
         conflicts = self._call("detect_calendar_conflicts", {"date": memory["today"]})
 
         bullets = []
@@ -66,6 +94,10 @@ class WorkflowAgent:
                 f"{conflict['first']['title']} overlaps with {conflict['second']['title']}."
             )
 
+        if todos:
+            todo_titles = ", ".join(todo["title"] for todo in todos)
+            bullets.append(f"Open todos: {todo_titles}.")
+
         if events:
             titles = ", ".join(event["title"] for event in events)
             bullets.append(f"Today's calendar: {titles}.")
@@ -84,4 +116,3 @@ class WorkflowAgent:
 
         self.trace.append(ToolCall(tool_name, arguments, result))
         return result
-
