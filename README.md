@@ -78,6 +78,8 @@ python app.py chat "我有哪些未完成任务？"
 python app.py chat "完成 todo 1"
 python app.py chat "把 event-001 改到 16:00-17:00"
 python app.py --commit chat "完成 todo 1"
+python app.py history
+python app.py history 1
 ```
 
 Run tests:
@@ -149,6 +151,57 @@ This mirrors a real agent safety pattern:
 
 ```text
 plan action -> show proposed change -> require confirmation -> commit side effect
+```
+
+## SQLite Persistence
+
+The CLI now uses a local SQLite database by default:
+
+```text
+data/workflow.db
+```
+
+The database is seeded from the JSON files in `data/`:
+
+```bash
+python scripts/init_db.py
+```
+
+You can also reset the database before a run:
+
+```bash
+python app.py --reset-db chat "有没有重要邮件？"
+```
+
+SQLite stores both product data and agent execution history:
+
+```text
+emails
+calendar_events
+todos
+user_memory
+agent_runs
+tool_calls
+```
+
+Each CLI run is persisted as an `agent_run`, and every tool call is saved under `tool_calls`.
+
+View recent runs:
+
+```bash
+python app.py history
+```
+
+Inspect one run:
+
+```bash
+python app.py history 1
+```
+
+This is the persistence layer that makes the agent debuggable and auditable:
+
+```text
+user message -> intent -> mode -> final result -> tool call trace
 ```
 
 ## Tools

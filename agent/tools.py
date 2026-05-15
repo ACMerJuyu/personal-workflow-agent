@@ -3,13 +3,16 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from agent.storage import SQLiteStorage
+
 
 class WorkflowTools:
-    def __init__(self, data_dir: str = "data", mode: str = "dry-run"):
+    def __init__(self, data_dir: str = "data", mode: str = "dry-run", storage: Optional[SQLiteStorage] = None):
         if mode not in {"dry-run", "commit"}:
             raise ValueError("mode must be 'dry-run' or 'commit'")
         self.data_dir = Path(data_dir)
         self.mode = mode
+        self.storage = storage
 
     def search_email(
         self,
@@ -18,6 +21,9 @@ class WorkflowTools:
         unread_only: bool = False,
         priority: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
+        if self.storage:
+            return self.storage.search_email(keyword, sender, unread_only, priority)
+
         emails = self._read_json("emails.json")
         results = []
 
@@ -37,6 +43,9 @@ class WorkflowTools:
         return results
 
     def get_email_by_id(self, email_id: str) -> Dict[str, Any]:
+        if self.storage:
+            return self.storage.get_email_by_id(email_id)
+
         emails = self._read_json("emails.json")
         for email in emails:
             if email["id"] == email_id:
@@ -44,6 +53,9 @@ class WorkflowTools:
         raise ValueError(f"email not found: {email_id}")
 
     def list_calendar_events(self, date: Optional[str] = None) -> List[Dict[str, Any]]:
+        if self.storage:
+            return self.storage.list_calendar_events(date)
+
         events = self._read_json("calendar.json")
         if date is None:
             return events
@@ -68,6 +80,17 @@ class WorkflowTools:
         return conflicts
 
     def reschedule_event(self, event_id: str, new_start: str, new_end: str) -> Dict[str, Any]:
+        if self.storage:
+            original = self.storage.get_event_by_id(event_id)
+            if self.mode == "commit":
+                return self.storage.reschedule_event(event_id, new_start, new_end)
+            dry_run_event = dict(original)
+            dry_run_event["start"] = new_start
+            dry_run_event["end"] = new_end
+            dry_run_event["dry_run"] = True
+            dry_run_event["original"] = original
+            return dry_run_event
+
         events = self._read_json("calendar.json")
         for index, event in enumerate(events):
             if event["id"] == event_id:
@@ -89,6 +112,9 @@ class WorkflowTools:
         include_done: bool = False,
         priority: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
+        if self.storage:
+            return self.storage.list_todos(include_done, priority)
+
         todos = self._read_json("todos.json")
         results = []
 
@@ -102,6 +128,19 @@ class WorkflowTools:
         return results
 
     def add_todo(self, title: str, due: str, source: str, priority: str = "medium") -> Dict[str, Any]:
+        if self.storage:
+            if self.mode == "commit":
+                return self.storage.add_todo(title, due, source, priority)
+            return {
+                "id": self.storage.next_todo_id(),
+                "title": title,
+                "due": due,
+                "source": source,
+                "priority": priority,
+                "done": False,
+                "dry_run": True,
+            }
+
         todos = self._read_json("todos.json")
         todo = {
             "id": len(todos) + 1,
@@ -119,6 +158,18 @@ class WorkflowTools:
         return todo
 
     def complete_todo(self, todo_id: int) -> Dict[str, Any]:
+        if self.storage:
+            if self.mode == "commit":
+                return self.storage.complete_todo(todo_id)
+            todos = self.storage.list_todos(include_done=True)
+            for todo in todos:
+                if todo["id"] == todo_id:
+                    updated_todo = dict(todo)
+                    updated_todo["done"] = True
+                    updated_todo["dry_run"] = True
+                    return updated_todo
+            raise ValueError(f"todo not found: {todo_id}")
+
         todos = self._read_json("todos.json")
         for todo in todos:
             if todo["id"] == todo_id:
