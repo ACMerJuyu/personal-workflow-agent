@@ -2,10 +2,16 @@ import argparse
 import json
 
 from agent.planner import WorkflowAgent
+from agent.tools import WorkflowTools
 
 
 def main():
     parser = argparse.ArgumentParser(description="Personal Workflow Agent demo")
+    parser.add_argument(
+        "--commit",
+        action="store_true",
+        help="Persist write actions. Default is dry-run mode.",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("brief", help="Generate today's daily brief")
@@ -20,7 +26,8 @@ def main():
     chat_parser.add_argument("message", help="Natural language message")
 
     args = parser.parse_args()
-    agent = WorkflowAgent()
+    mode = "commit" if args.commit else "dry-run"
+    agent = WorkflowAgent(tools=WorkflowTools(mode=mode))
 
     if args.command == "brief":
         result = agent.daily_brief()

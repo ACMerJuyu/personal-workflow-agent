@@ -68,7 +68,7 @@ class WorkflowToolsTest(unittest.TestCase):
             ),
             encoding="utf-8",
         )
-        self.tools = WorkflowTools(str(self.data_dir))
+        self.tools = WorkflowTools(str(self.data_dir), mode="commit")
 
     def tearDown(self):
         self.temp_dir.cleanup()
@@ -109,6 +109,28 @@ class WorkflowToolsTest(unittest.TestCase):
         self.assertTrue(todo["done"])
         open_todos = self.tools.list_todos()
         self.assertEqual(open_todos, [])
+
+    def test_dry_run_add_todo_does_not_persist_task(self):
+        tools = WorkflowTools(str(self.data_dir), mode="dry-run")
+        todo = tools.add_todo("Dry run task", "16:00", "manual")
+        self.assertTrue(todo["dry_run"])
+        todos = json.loads((self.data_dir / "todos.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(todos), 2)
+
+    def test_dry_run_complete_todo_does_not_mark_file_done(self):
+        tools = WorkflowTools(str(self.data_dir), mode="dry-run")
+        todo = tools.complete_todo(1)
+        self.assertTrue(todo["done"])
+        self.assertTrue(todo["dry_run"])
+        todos = json.loads((self.data_dir / "todos.json").read_text(encoding="utf-8"))
+        self.assertFalse(todos[0]["done"])
+
+    def test_dry_run_reschedule_event_does_not_persist_time(self):
+        tools = WorkflowTools(str(self.data_dir), mode="dry-run")
+        event = tools.reschedule_event("c", "15:00", "16:00")
+        self.assertTrue(event["dry_run"])
+        events = tools.list_calendar_events("2026-05-15")
+        self.assertEqual(events[0]["start"], "13:00")
 
 
 if __name__ == "__main__":

@@ -5,8 +5,11 @@ from typing import Any, Dict, List, Optional
 
 
 class WorkflowTools:
-    def __init__(self, data_dir: str = "data"):
+    def __init__(self, data_dir: str = "data", mode: str = "dry-run"):
+        if mode not in {"dry-run", "commit"}:
+            raise ValueError("mode must be 'dry-run' or 'commit'")
         self.data_dir = Path(data_dir)
+        self.mode = mode
 
     def search_email(
         self,
@@ -66,12 +69,19 @@ class WorkflowTools:
 
     def reschedule_event(self, event_id: str, new_start: str, new_end: str) -> Dict[str, Any]:
         events = self._read_json("calendar.json")
-        for event in events:
+        for index, event in enumerate(events):
             if event["id"] == event_id:
+                original = dict(event)
                 event["start"] = new_start
                 event["end"] = new_end
-                self._write_json("calendar.json", events)
-                return event
+                if self.mode == "commit":
+                    self._write_json("calendar.json", events)
+                    return event
+                dry_run_event = dict(event)
+                dry_run_event["dry_run"] = True
+                dry_run_event["original"] = original
+                events[index] = original
+                return dry_run_event
         raise ValueError(f"calendar event not found: {event_id}")
 
     def list_todos(
@@ -101,6 +111,9 @@ class WorkflowTools:
             "priority": priority,
             "done": False,
         }
+        if self.mode == "dry-run":
+            todo["dry_run"] = True
+            return todo
         todos.append(todo)
         self._write_json("todos.json", todos)
         return todo
@@ -109,9 +122,14 @@ class WorkflowTools:
         todos = self._read_json("todos.json")
         for todo in todos:
             if todo["id"] == todo_id:
-                todo["done"] = True
-                self._write_json("todos.json", todos)
-                return todo
+                updated_todo = dict(todo)
+                updated_todo["done"] = True
+                if self.mode == "commit":
+                    todo["done"] = True
+                    self._write_json("todos.json", todos)
+                    return todo
+                updated_todo["dry_run"] = True
+                return updated_todo
         raise ValueError(f"todo not found: {todo_id}")
 
     def draft_reply(self, email: Dict[str, Any], tone: str = "concise") -> Dict[str, str]:

@@ -68,7 +68,11 @@ class ChatAgentTest(unittest.TestCase):
             json.dumps({"today": "2026-05-14", "reply_tone": "friendly"}),
             encoding="utf-8",
         )
-        self.agent = WorkflowAgent(WorkflowTools(str(data_dir)), UserMemory(str(data_dir / "memory.json")))
+        self.data_dir = data_dir
+        self.agent = WorkflowAgent(
+            WorkflowTools(str(data_dir), mode="commit"),
+            UserMemory(str(data_dir / "memory.json")),
+        )
 
     def tearDown(self):
         self.temp_dir.cleanup()
@@ -86,14 +90,23 @@ class ChatAgentTest(unittest.TestCase):
     def test_chat_completes_todo(self):
         result = self.agent.chat("完成 todo 1")
         self.assertEqual(result.title, "Todo Completed")
-        self.assertIn("Read morning inbox is now done", result.to_text())
+        self.assertIn("Todo completed: Read morning inbox", result.to_text())
 
     def test_chat_reschedules_event(self):
         result = self.agent.chat("把 event-001 改到 16:00-17:00")
         self.assertEqual(result.title, "Event Rescheduled")
-        self.assertIn("Deep Work moved to 16:00-17:00", result.to_text())
+        self.assertIn("Event moved: Deep Work to 16:00-17:00", result.to_text())
+
+    def test_chat_dry_run_does_not_persist_reschedule(self):
+        dry_run_agent = WorkflowAgent(
+            WorkflowTools(str(self.data_dir), mode="dry-run"),
+            UserMemory(str(self.data_dir / "memory.json")),
+        )
+        result = dry_run_agent.chat("把 event-001 改到 16:00-17:00")
+        self.assertIn("Event would be moved", result.to_text())
+        events = json.loads((self.data_dir / "calendar.json").read_text(encoding="utf-8"))
+        self.assertEqual(events[0]["start"], "14:30")
 
 
 if __name__ == "__main__":
     unittest.main()
-

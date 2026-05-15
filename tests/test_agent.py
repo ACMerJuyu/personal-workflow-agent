@@ -54,7 +54,10 @@ class WorkflowAgentTest(unittest.TestCase):
             json.dumps({"today": "2026-05-14", "reply_tone": "friendly"}),
             encoding="utf-8",
         )
-        self.agent = WorkflowAgent(WorkflowTools(str(data_dir)), UserMemory(str(data_dir / "memory.json")))
+        self.agent = WorkflowAgent(
+            WorkflowTools(str(data_dir), mode="commit"),
+            UserMemory(str(data_dir / "memory.json")),
+        )
 
     def tearDown(self):
         self.temp_dir.cleanup()

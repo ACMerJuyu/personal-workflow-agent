@@ -116,7 +116,8 @@ class WorkflowAgent:
     def complete_todo(self, todo_id: int) -> AgentResult:
         self.trace = []
         todo = self._call("complete_todo", {"todo_id": todo_id})
-        return AgentResult("Todo Completed", [f"{todo['title']} is now done."], self.trace)
+        action = "Todo would be completed" if todo.get("dry_run") else "Todo completed"
+        return AgentResult("Todo Completed", [f"{action}: {todo['title']}."], self.trace)
 
     def reschedule_event(self, event_id: str, new_start: str, new_end: str) -> AgentResult:
         self.trace = []
@@ -126,7 +127,14 @@ class WorkflowAgent:
         )
         return AgentResult(
             "Event Rescheduled",
-            [f"{event['title']} moved to {event['start']}-{event['end']}."],
+            [
+                (
+                    "Event would be moved"
+                    if event.get("dry_run")
+                    else "Event moved"
+                )
+                + f": {event['title']} to {event['start']}-{event['end']}."
+            ],
             self.trace,
         )
 
@@ -154,7 +162,8 @@ class WorkflowAgent:
                     "priority": "high",
                 },
             )
-            bullets.append(f"Todo created: {todo['title']} due {todo['due']}.")
+            action = "Todo would be created" if todo.get("dry_run") else "Todo created"
+            bullets.append(f"{action}: {todo['title']} due {todo['due']}.")
             draft = self._call("draft_reply", {"email": email, "tone": memory["reply_tone"]})
             bullets.append(f"Reply draft prepared to {draft['to']}.")
 

@@ -77,6 +77,7 @@ python app.py chat "今天有没有日程冲突？"
 python app.py chat "我有哪些未完成任务？"
 python app.py chat "完成 todo 1"
 python app.py chat "把 event-001 改到 16:00-17:00"
+python app.py --commit chat "完成 todo 1"
 ```
 
 Run tests:
@@ -117,6 +118,37 @@ This is intentionally rule-based for now. It teaches the same core pattern as LL
 
 ```text
 message -> intent -> parameter extraction -> tool call -> observation -> response
+```
+
+## Execution Safety
+
+The agent runs in `dry-run` mode by default.
+
+In dry-run mode, write tools simulate actions without changing files:
+
+```bash
+python app.py chat "今天有什么安排？"
+python app.py chat "把 event-001 改到 16:00-17:00"
+```
+
+Example wording:
+
+```text
+Todo would be created: Review A1 product proposal due 15:00.
+Event would be moved: Deep Work to 16:00-17:00.
+```
+
+To persist write actions, explicitly use `--commit`:
+
+```bash
+python app.py --commit chat "完成 todo 1"
+python app.py --commit chat "把 event-001 改到 16:00-17:00"
+```
+
+This mirrors a real agent safety pattern:
+
+```text
+plan action -> show proposed change -> require confirmation -> commit side effect
 ```
 
 ## Tools
