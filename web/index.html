@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Personal Workflow Agent Dashboard</title>
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Personal Workflow Agent</p>
+          <h1>Agent Dashboard</h1>
+        </div>
+        <div class="status-pill" id="api-status">Checking API</div>
+      </header>
+
+      <section class="command-panel">
+        <label for="message">Message</label>
+        <div class="command-row">
+          <input
+            id="message"
+            value="Do I have calendar conflicts today?"
+            autocomplete="off"
+          />
+          <button id="run-button">Run Agent</button>
+        </div>
+        <div class="options-row">
+          <label>
+            <input type="checkbox" id="commit" />
+            Commit write actions
+          </label>
+          <label>
+            <input type="checkbox" id="reset-db" checked />
+            Reset demo DB before run
+          </label>
+        </div>
+      </section>
+
+      <section class="dashboard-grid">
+        <section class="panel result-panel">
+          <div class="panel-heading">
+            <h2>Agent Result</h2>
+            <span id="run-id">No run yet</span>
+          </div>
+          <h3 id="result-title">Waiting for input</h3>
+          <ol id="result-bullets"></ol>
+        </section>
+
+        <section class="panel trace-panel">
+          <div class="panel-heading">
+            <h2>Tool Trace</h2>
+            <span id="trace-count">0 calls</span>
+          </div>
+          <div id="trace-list" class="trace-list"></div>
+        </section>
+      </section>
+
+      <section class="data-grid">
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Emails</h2>
+          </div>
+          <div id="emails-list" class="data-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Calendar</h2>
+          </div>
+          <div id="calendar-list" class="data-list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Todos</h2>
+          </div>
+          <div id="todos-list" class="data-list"></div>
+        </section>
+      </section>
+
+      <section class="panel history-panel">
+        <div class="panel-heading">
+          <h2>Recent Runs</h2>
+          <button class="secondary-button" id="refresh-history">Refresh</button>
+        </div>
+        <div id="history-list" class="history-list"></div>
+      </section>
+    </main>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>

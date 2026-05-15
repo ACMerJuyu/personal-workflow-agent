@@ -29,6 +29,7 @@ This repository demonstrates an agent loop with tool calling, structured outputs
 - Supports dry-run and commit modes
 - Persists agent runs and tool calls in SQLite
 - Exposes a FastAPI backend service
+- Provides a simple browser dashboard
 
 ## Project Structure
 
@@ -62,6 +63,10 @@ personal-workflow-agent/
     test_router.py
     test_storage.py
     test_tools.py
+  web/
+    index.html
+    styles.css
+    app.js
 ```
 
 ## Quick Start
@@ -231,13 +236,43 @@ Open interactive API docs:
 http://127.0.0.1:8010/docs
 ```
 
+Open the dashboard:
+
+```text
+http://127.0.0.1:8010/dashboard
+```
+
 FastAPI turns the existing agent functions into web endpoints. This moves the project from a CLI demo toward a backend service that a web dashboard can call.
+
+## Dashboard
+
+Dashboard v1 is a small static frontend served by FastAPI. It uses plain HTML, CSS, and JavaScript so the project stays easy to understand while the agent architecture is still evolving.
+
+The dashboard calls the existing API endpoints:
+
+- `POST /agent/chat`
+- `GET /emails`
+- `GET /calendar`
+- `GET /todos`
+- `GET /agent/runs`
+
+Current dashboard flow:
+
+```text
+browser
+  -> FastAPI static page
+  -> FastAPI JSON endpoints
+  -> WorkflowAgent
+  -> tools and SQLite
+  -> rendered result, trace, data, history
+```
 
 ### Endpoints
 
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/health` | Health check |
+| `GET` | `/dashboard` | Browser dashboard |
 | `POST` | `/agent/chat` | Run conversational agent |
 | `POST` | `/agent/brief` | Generate morning brief |
 | `GET` | `/agent/runs` | List saved agent runs |
@@ -320,4 +355,3 @@ This project is intentionally small but complete. It shows:
 - SQLite persistence
 - API service design
 - Testing discipline
-

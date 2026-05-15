@@ -32,6 +32,16 @@ class APITest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["status"], "ok")
 
+    def test_dashboard(self):
+        response = self.client.get("/dashboard")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Agent Dashboard", response.text)
+
+    def test_dashboard_static_assets(self):
+        response = self.client.get("/static/app.js")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("runAgent", response.text)
+
     def test_agent_chat_persists_run(self):
         response = self.client.post(
             "/agent/chat",
@@ -56,4 +66,3 @@ class APITest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

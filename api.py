@@ -1,6 +1,9 @@
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from agent.memory import UserMemory
@@ -15,6 +18,11 @@ app = FastAPI(
     description="API service for a personal workflow agent with tool traces and SQLite persistence.",
     version="0.1.0",
 )
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+WEB_DIR = PROJECT_ROOT / "web"
+
+app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
 
 
 class ChatRequest(BaseModel):
@@ -70,7 +78,13 @@ def root() -> Dict[str, str]:
         "name": "Personal Workflow Agent API",
         "status": "ok",
         "docs": "/docs",
+        "dashboard": "/dashboard",
     }
+
+
+@app.get("/dashboard")
+def dashboard() -> FileResponse:
+    return FileResponse(WEB_DIR / "index.html")
 
 
 @app.get("/health")
@@ -133,4 +147,3 @@ def list_calendar(date: Optional[str] = None) -> List[Dict[str, Any]]:
 def list_todos(include_done: bool = False, priority: Optional[str] = None) -> List[Dict[str, Any]]:
     storage = get_storage()
     return storage.list_todos(include_done=include_done, priority=priority)
-
