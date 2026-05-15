@@ -41,6 +41,7 @@ class APITest(unittest.TestCase):
         response = self.client.get("/static/app.js")
         self.assertEqual(response.status_code, 200)
         self.assertIn("runAgent", response.text)
+        self.assertIn("approveAction", response.text)
 
     def test_agent_chat_persists_run(self):
         response = self.client.post(
@@ -65,10 +66,51 @@ class APITest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("ReAct Timeline", response.text)
 
+    def test_dashboard_mentions_pending_actions(self):
+        response = self.client.get("/dashboard")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("Pending Actions", response.text)
+
     def test_list_todos(self):
         response = self.client.get("/todos")
         self.assertEqual(response.status_code, 200)
         self.assertGreaterEqual(len(response.json()), 1)
+
+    def test_dry_run_write_creates_pending_action_and_approve_commits_it(self):
+        chat_response = self.client.post(
+            "/agent/chat",
+            json={"message": "Move event-001 to 16:00-17:00", "reset_db": True},
+        )
+        self.assertEqual(chat_response.status_code, 200)
+
+        actions = self.client.get("/agent/pending-actions").json()
+        self.assertEqual(len(actions), 1)
+        self.assertEqual(actions[0]["action_type"], "reschedule_event")
+        self.assertEqual(actions[0]["status"], "pending")
+
+        approve_response = self.client.post(f"/agent/actions/{actions[0]['id']}/approve")
+        self.assertEqual(approve_response.status_code, 200)
+        self.assertEqual(approve_response.json()["status"], "approved")
+
+        events = self.client.get("/calendar").json()
+        moved = [event for event in events if event["id"] == "event-001"][0]
+        self.assertEqual(moved["start"], "16:00")
+        self.assertEqual(moved["end"], "17:00")
+
+    def test_reject_pending_action_does_not_commit_it(self):
+        self.client.post(
+            "/agent/chat",
+            json={"message": "Move event-001 to 16:00-17:00", "reset_db": True},
+        )
+        action = self.client.get("/agent/pending-actions").json()[0]
+
+        reject_response = self.client.post(f"/agent/actions/{action['id']}/reject")
+        self.assertEqual(reject_response.status_code, 200)
+        self.assertEqual(reject_response.json()["status"], "rejected")
+
+        events = self.client.get("/calendar").json()
+        original = [event for event in events if event["id"] == "event-001"][0]
+        self.assertNotEqual(original["start"], "16:00")
 
 
 if __name__ == "__main__":

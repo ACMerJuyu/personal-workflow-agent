@@ -63,6 +63,8 @@ def response_from_result(
     mode: str,
 ) -> AgentResponse:
     run_id = storage.save_agent_run(message, intent, mode, result)
+    if mode == "dry-run":
+        save_pending_actions(storage, run_id, result)
     return AgentResponse(
         run_id=run_id,
         title=result.title,
@@ -72,6 +74,43 @@ def response_from_result(
         mode=mode,
         intent=intent,
     )
+
+
+def save_pending_actions(storage: SQLiteStorage, run_id: int, result: AgentResult) -> None:
+    for call in result.trace:
+        if call.name not in {"add_todo", "complete_todo", "reschedule_event"}:
+            continue
+        if not isinstance(call.result, dict) or not call.result.get("dry_run"):
+            continue
+        storage.create_pending_action(
+            run_id=run_id,
+            action_type=call.name,
+            description=describe_pending_action(call.name, call.arguments, call.result),
+            payload=call.arguments,
+        )
+
+
+def describe_pending_action(tool_name: str, arguments: Dict[str, Any], result: Dict[str, Any]) -> str:
+    if tool_name == "add_todo":
+        return f"Create todo: {result['title']} due {result['due']}"
+    if tool_name == "complete_todo":
+        return f"Complete todo: {result['title']}"
+    if tool_name == "reschedule_event":
+        return f"Move event {arguments['event_id']} to {arguments['new_start']}-{arguments['new_end']}"
+    return tool_name
+
+
+def execute_pending_action(storage: SQLiteStorage, action: Dict[str, Any]) -> Dict[str, Any]:
+    tools = WorkflowTools(mode="commit", storage=storage)
+    payload = action["payload"]
+
+    if action["action_type"] == "add_todo":
+        return tools.add_todo(**payload)
+    if action["action_type"] == "complete_todo":
+        return tools.complete_todo(**payload)
+    if action["action_type"] == "reschedule_event":
+        return tools.reschedule_event(**payload)
+    raise ValueError(f"unsupported action type: {action['action_type']}")
 
 
 @app.get("/")
@@ -124,6 +163,34 @@ def get_run(run_id: int) -> Dict[str, Any]:
     storage = get_storage()
     try:
         return storage.get_agent_run(run_id)
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+
+
+@app.get("/agent/pending-actions")
+def list_pending_actions(include_resolved: bool = False) -> List[Dict[str, Any]]:
+    storage = get_storage()
+    return storage.list_pending_actions(include_resolved=include_resolved)
+
+
+@app.post("/agent/actions/{action_id}/approve")
+def approve_action(action_id: int) -> Dict[str, Any]:
+    storage = get_storage()
+    try:
+        action = storage.get_pending_action(action_id)
+        result = execute_pending_action(storage, action)
+        updated = storage.mark_pending_action(action_id, "approved")
+    except ValueError as error:
+        raise HTTPException(status_code=404, detail=str(error))
+    updated["execution_result"] = result
+    return updated
+
+
+@app.post("/agent/actions/{action_id}/reject")
+def reject_action(action_id: int) -> Dict[str, Any]:
+    storage = get_storage()
+    try:
+        return storage.mark_pending_action(action_id, "rejected")
     except ValueError as error:
         raise HTTPException(status_code=404, detail=str(error))
 

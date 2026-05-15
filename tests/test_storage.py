@@ -99,7 +99,24 @@ class SQLiteStorageTest(unittest.TestCase):
         self.assertEqual(run["user_message"], "demo")
         self.assertEqual(run["tool_calls"][0]["tool_name"], "search_email")
 
+    def test_pending_action_lifecycle(self):
+        action_id = self.storage.create_pending_action(
+            run_id=7,
+            action_type="complete_todo",
+            description="Complete todo 1",
+            payload={"todo_id": 1},
+        )
+
+        actions = self.storage.list_pending_actions()
+        self.assertEqual(len(actions), 1)
+        self.assertEqual(actions[0]["id"], action_id)
+        self.assertEqual(actions[0]["status"], "pending")
+        self.assertEqual(actions[0]["payload"]["todo_id"], 1)
+
+        approved = self.storage.mark_pending_action(action_id, "approved")
+        self.assertEqual(approved["status"], "approved")
+        self.assertEqual(self.storage.list_pending_actions(), [])
+
 
 if __name__ == "__main__":
     unittest.main()
-

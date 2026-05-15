@@ -66,6 +66,18 @@ class SQLiteStorage:
                     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (run_id) REFERENCES agent_runs(id)
                 );
+
+                CREATE TABLE IF NOT EXISTS pending_actions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    run_id INTEGER,
+                    action_type TEXT NOT NULL,
+                    description TEXT NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (run_id) REFERENCES agent_runs(id)
+                );
                 """
             )
 
@@ -79,6 +91,7 @@ class SQLiteStorage:
                 conn.execute("DELETE FROM calendar_events")
                 conn.execute("DELETE FROM todos")
                 conn.execute("DELETE FROM user_memory")
+                conn.execute("DELETE FROM pending_actions")
 
             if force or self._table_is_empty(conn, "emails"):
                 for email in self._read_json(data_path / "emails.json"):
@@ -329,6 +342,63 @@ class SQLiteStorage:
         run["tool_calls"] = [self._tool_call_from_row(call) for call in calls]
         return run
 
+    def create_pending_action(
+        self,
+        run_id: Optional[int],
+        action_type: str,
+        description: str,
+        payload: Dict[str, Any],
+    ) -> int:
+        with self._connect() as conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO pending_actions
+                (run_id, action_type, description, payload_json)
+                VALUES (?, ?, ?, ?)
+                """,
+                (run_id, action_type, description, json.dumps(payload, ensure_ascii=False)),
+            )
+            return int(cursor.lastrowid)
+
+    def list_pending_actions(self, include_resolved: bool = False) -> List[Dict[str, Any]]:
+        sql = "SELECT * FROM pending_actions"
+        params: Tuple[Any, ...] = ()
+        if not include_resolved:
+            sql += " WHERE status = ?"
+            params = ("pending",)
+        sql += " ORDER BY id DESC"
+
+        with self._connect() as conn:
+            rows = conn.execute(sql, params).fetchall()
+        return [self._pending_action_from_row(row) for row in rows]
+
+    def get_pending_action(self, action_id: int) -> Dict[str, Any]:
+        with self._connect() as conn:
+            row = conn.execute("SELECT * FROM pending_actions WHERE id = ?", (action_id,)).fetchone()
+        if row is None:
+            raise ValueError(f"pending action not found: {action_id}")
+        return self._pending_action_from_row(row)
+
+    def mark_pending_action(self, action_id: int, status: str) -> Dict[str, Any]:
+        if status not in {"approved", "rejected"}:
+            raise ValueError("status must be 'approved' or 'rejected'")
+
+        action = self.get_pending_action(action_id)
+        if action["status"] != "pending":
+            raise ValueError(f"pending action already resolved: {action_id}")
+
+        with self._connect() as conn:
+            conn.execute(
+                """
+                UPDATE pending_actions
+                SET status = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (status, action_id),
+            )
+        action["status"] = status
+        return action
+
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
@@ -369,3 +439,8 @@ class SQLiteStorage:
         call["result"] = json.loads(call.pop("result_json"))
         return call
 
+    @staticmethod
+    def _pending_action_from_row(row: sqlite3.Row) -> Dict[str, Any]:
+        action = dict(row)
+        action["payload"] = json.loads(action.pop("payload_json"))
+        return action

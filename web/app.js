@@ -11,6 +11,8 @@ const traceListEl = document.querySelector("#trace-list");
 const emailsListEl = document.querySelector("#emails-list");
 const calendarListEl = document.querySelector("#calendar-list");
 const todosListEl = document.querySelector("#todos-list");
+const pendingCountEl = document.querySelector("#pending-count");
+const pendingActionsListEl = document.querySelector("#pending-actions-list");
 const historyListEl = document.querySelector("#history-list");
 const refreshHistoryButton = document.querySelector("#refresh-history");
 
@@ -128,16 +130,18 @@ function renderStepDetails(step) {
 }
 
 async function refreshData() {
-  const [emails, calendar, todos, history] = await Promise.all([
+  const [emails, calendar, todos, pendingActions, history] = await Promise.all([
     api("/emails"),
     api("/calendar"),
     api("/todos"),
+    api("/agent/pending-actions"),
     api("/agent/runs"),
   ]);
 
   renderEmails(emails);
   renderCalendar(calendar);
   renderTodos(todos);
+  renderPendingActions(pendingActions);
   renderHistory(history);
 }
 
@@ -193,6 +197,46 @@ function renderHistory(runs) {
     .join("");
 }
 
+function renderPendingActions(actions) {
+  pendingCountEl.textContent = `${actions.length} pending`;
+
+  if (!actions.length) {
+    pendingActionsListEl.innerHTML = `
+      <article class="approval-card empty-state">
+        <p>No pending action.</p>
+      </article>
+    `;
+    return;
+  }
+
+  pendingActionsListEl.innerHTML = actions
+    .map(
+      (action) => `
+        <article class="approval-card">
+          <div>
+            <h4>${escapeHtml(action.description)}</h4>
+            <p>${escapeHtml(action.action_type)} | run #${escapeHtml(action.run_id)} | ${escapeHtml(action.created_at)}</p>
+          </div>
+          <div class="approval-actions">
+            <button data-action="approve" data-id="${action.id}">Approve</button>
+            <button class="reject-button" data-action="reject" data-id="${action.id}">Reject</button>
+          </div>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+async function approveAction(actionId) {
+  await api(`/agent/actions/${actionId}/approve`, { method: "POST" });
+  await refreshData();
+}
+
+async function rejectAction(actionId) {
+  await api(`/agent/actions/${actionId}/reject`, { method: "POST" });
+  await refreshData();
+}
+
 function escapeHtml(value) {
   return String(value)
     .replaceAll("&", "&amp;")
@@ -209,6 +253,19 @@ messageInput.addEventListener("keydown", (event) => {
   }
 });
 refreshHistoryButton.addEventListener("click", refreshData);
+pendingActionsListEl.addEventListener("click", async (event) => {
+  const button = event.target.closest("button[data-action]");
+  if (!button) {
+    return;
+  }
+
+  button.disabled = true;
+  if (button.dataset.action === "approve") {
+    await approveAction(button.dataset.id);
+  } else {
+    await rejectAction(button.dataset.id);
+  }
+});
 
 checkHealth();
 refreshData();

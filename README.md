@@ -31,6 +31,7 @@ This repository demonstrates an agent loop with tool calling, structured outputs
 - Exposes a FastAPI backend service
 - Provides a simple browser dashboard
 - Shows a ReAct-style timeline for agent reasoning and tool use
+- Requires approval before dry-run write actions are committed
 
 ## Project Structure
 
@@ -201,6 +202,7 @@ todos
 user_memory
 agent_runs
 tool_calls
+pending_actions
 ```
 
 Each CLI/API run is persisted as an `agent_run`, and every tool call is saved under `tool_calls`.
@@ -276,6 +278,17 @@ Thought -> Action -> Observation -> Final
 
 This makes the agent loop easier to inspect during demos. The current ReAct timeline is deterministic and rule-based; a later version can replace the planner with an LLM-backed planner while preserving the same tool and trace interfaces.
 
+The dashboard includes a Pending Actions panel. In dry-run mode, write tools such as `add_todo`, `complete_todo`, and `reschedule_event` create pending actions instead of changing data immediately. The user can approve or reject each action from the dashboard.
+
+Approval flow:
+
+```text
+agent proposes write action
+  -> pending_actions row
+  -> user approves or rejects
+  -> approved actions execute in commit mode
+```
+
 ### Endpoints
 
 | Method | Path | Purpose |
@@ -286,6 +299,9 @@ This makes the agent loop easier to inspect during demos. The current ReAct time
 | `POST` | `/agent/brief` | Generate morning brief |
 | `GET` | `/agent/runs` | List saved agent runs |
 | `GET` | `/agent/runs/{run_id}` | Inspect one saved run and tool trace |
+| `GET` | `/agent/pending-actions` | List actions waiting for approval |
+| `POST` | `/agent/actions/{action_id}/approve` | Approve and commit one pending action |
+| `POST` | `/agent/actions/{action_id}/reject` | Reject one pending action |
 | `GET` | `/emails` | Query emails |
 | `GET` | `/calendar` | Query calendar events |
 | `GET` | `/todos` | Query todos |

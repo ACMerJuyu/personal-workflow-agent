@@ -190,6 +190,10 @@ input[type="text"],
   margin-bottom: 18px;
 }
 
+.approvals-panel {
+  margin-bottom: 18px;
+}
+
 .panel {
   min-width: 0;
   padding: 18px;
@@ -219,14 +223,16 @@ input[type="text"],
 
 .trace-list,
 .data-list,
-.history-list {
+.history-list,
+.approval-list {
   display: grid;
   gap: 10px;
 }
 
 .trace-card,
 .data-card,
-.history-card {
+.history-card,
+.approval-card {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -235,7 +241,8 @@ input[type="text"],
 
 .trace-card h4,
 .data-card h4,
-.history-card h4 {
+.history-card h4,
+.approval-card h4 {
   margin: 0 0 6px;
   font-size: 14px;
 }
@@ -309,11 +316,44 @@ input[type="text"],
 }
 
 .data-card p,
-.history-card p {
+.history-card p,
+.approval-card p {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.approval-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: center;
+}
+
+.approval-card.empty-state {
+  display: block;
+}
+
+.approval-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.approval-actions button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--success);
+  color: white;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.approval-actions .reject-button {
+  background: #fdecec;
+  color: var(--danger);
 }
 
 @media (max-width: 980px) {
@@ -329,12 +369,17 @@ input[type="text"],
   }
 
   .topbar,
-  .command-row {
+  .command-row,
+  .approval-card {
     display: block;
   }
 
   #run-button {
     width: 100%;
+    margin-top: 10px;
+  }
+
+  .approval-actions {
     margin-top: 10px;
   }
 }
