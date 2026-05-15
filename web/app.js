@@ -73,17 +73,58 @@ function renderResult(payload) {
     .map((bullet) => `<li>${escapeHtml(bullet)}</li>`)
     .join("");
 
-  traceCountEl.textContent = `${payload.trace.length} calls`;
-  traceListEl.innerHTML = payload.trace
+  const steps = payload.react_steps && payload.react_steps.length
+    ? payload.react_steps
+    : payload.trace.map((call) => ({
+        kind: "action",
+        content: `Call ${call.name}.`,
+        tool_name: call.name,
+        arguments: call.arguments,
+        observation: call.result,
+      }));
+
+  traceCountEl.textContent = `${steps.length} steps`;
+  traceListEl.innerHTML = steps
     .map(
-      (call, index) => `
-        <article class="trace-card">
-          <h4>${index + 1}. ${escapeHtml(call.name)}</h4>
-          <pre>${escapeHtml(JSON.stringify({ arguments: call.arguments, result: call.result }, null, 2))}</pre>
+      (step, index) => `
+        <article class="trace-card react-step ${escapeHtml(step.kind)}">
+          <div class="react-step-header">
+            <span>${index + 1}</span>
+            <h4>${escapeHtml(formatStepTitle(step))}</h4>
+          </div>
+          <p>${escapeHtml(step.content)}</p>
+          ${renderStepDetails(step)}
         </article>
       `,
     )
     .join("");
+}
+
+function formatStepTitle(step) {
+  if (step.kind === "action" && step.tool_name) {
+    return `Action: ${step.tool_name}`;
+  }
+  return step.kind.charAt(0).toUpperCase() + step.kind.slice(1);
+}
+
+function renderStepDetails(step) {
+  if (step.kind !== "action" && step.kind !== "observation") {
+    return "";
+  }
+
+  const details = {};
+  if (step.arguments && Object.keys(step.arguments).length) {
+    details.arguments = step.arguments;
+  }
+  if (step.observation !== null && step.observation !== undefined) {
+    details.observation = step.observation;
+  }
+
+  if (!Object.keys(details).length) {
+    return "";
+  }
+
+  return `<pre>${escapeHtml(JSON.stringify(details, null, 2))}</pre>`;
 }
 
 async function refreshData() {

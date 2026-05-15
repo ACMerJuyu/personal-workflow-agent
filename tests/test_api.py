@@ -53,10 +53,17 @@ class APITest(unittest.TestCase):
         self.assertGreaterEqual(payload["run_id"], 1)
         self.assertEqual(payload["intent"], "important_emails")
         self.assertEqual(payload["trace"][0]["name"], "search_email")
+        self.assertEqual(payload["react_steps"][0]["kind"], "thought")
+        self.assertIn("action", [step["kind"] for step in payload["react_steps"]])
 
         history = self.client.get("/agent/runs").json()
         self.assertGreaterEqual(len(history), 1)
         self.assertEqual(history[0]["final_title"], "Important Emails")
+
+    def test_dashboard_mentions_react_timeline(self):
+        response = self.client.get("/dashboard")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("ReAct Timeline", response.text)
 
     def test_list_todos(self):
         response = self.client.get("/todos")

@@ -91,6 +91,16 @@ class WorkflowAgentTest(unittest.TestCase):
         result = self.agent.daily_brief()
         self.assertIn("Open todos: Read morning inbox.", result.to_text())
 
+    def test_calendar_conflicts_exposes_react_steps(self):
+        result = self.agent.chat("Do I have calendar conflicts today?")
+        step_types = [step.kind for step in result.react_steps]
+
+        self.assertEqual(step_types[0], "thought")
+        self.assertIn("action", step_types)
+        self.assertIn("observation", step_types)
+        self.assertEqual(step_types[-1], "final")
+        self.assertIn("detect_calendar_conflicts", [step.tool_name for step in result.react_steps])
+
 
 if __name__ == "__main__":
     unittest.main()

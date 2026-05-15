@@ -30,6 +30,7 @@ This repository demonstrates an agent loop with tool calling, structured outputs
 - Persists agent runs and tool calls in SQLite
 - Exposes a FastAPI backend service
 - Provides a simple browser dashboard
+- Shows a ReAct-style timeline for agent reasoning and tool use
 
 ## Project Structure
 
@@ -266,6 +267,14 @@ browser
   -> tools and SQLite
   -> rendered result, trace, data, history
 ```
+
+The dashboard also shows a ReAct-style timeline:
+
+```text
+Thought -> Action -> Observation -> Final
+```
+
+This makes the agent loop easier to inspect during demos. The current ReAct timeline is deterministic and rule-based; a later version can replace the planner with an LLM-backed planner while preserving the same tool and trace interfaces.
 
 ### Endpoints
 

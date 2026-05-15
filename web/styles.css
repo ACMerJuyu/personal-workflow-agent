@@ -251,6 +251,63 @@ input[type="text"],
   line-height: 1.45;
 }
 
+.trace-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.react-step {
+  position: relative;
+}
+
+.react-step::before {
+  position: absolute;
+  top: 14px;
+  left: -1px;
+  width: 4px;
+  height: calc(100% - 28px);
+  border-radius: 99px;
+  background: var(--line);
+  content: "";
+}
+
+.react-step.thought::before {
+  background: #315efb;
+}
+
+.react-step.action::before {
+  background: #8b5cf6;
+}
+
+.react-step.observation::before {
+  background: #157f3b;
+}
+
+.react-step.final::before {
+  background: #f59e0b;
+}
+
+.react-step-header {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.react-step-header span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .data-card p,
 .history-card p {
   margin: 4px 0 0;

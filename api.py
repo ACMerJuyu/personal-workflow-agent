@@ -36,6 +36,7 @@ class AgentResponse(BaseModel):
     title: str
     bullets: List[str]
     trace: List[Dict[str, Any]]
+    react_steps: List[Dict[str, Any]]
     mode: str
     intent: str
 
@@ -67,6 +68,7 @@ def response_from_result(
         title=result.title,
         bullets=result.bullets,
         trace=[call.to_dict() for call in result.trace],
+        react_steps=[step.to_dict() for step in result.react_steps],
         mode=mode,
         intent=intent,
     )

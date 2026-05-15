@@ -1,7 +1,7 @@
 from typing import Any, Dict, List
 
 from agent.memory import UserMemory
-from agent.models import AgentResult, ToolCall
+from agent.models import AgentResult, ReActStep, ToolCall
 from agent.parser import extract_event_id, extract_time_range, extract_todo_id
 from agent.router import IntentRouter
 from agent.tools import WorkflowTools
@@ -13,6 +13,7 @@ class WorkflowAgent:
         self.memory = memory or UserMemory()
         self.router = router or IntentRouter()
         self.trace: List[ToolCall] = []
+        self.react_steps: List[ReActStep] = []
 
     def run(self, goal: str) -> AgentResult:
         self.trace = []
@@ -60,72 +61,72 @@ class WorkflowAgent:
         )
 
     def important_emails(self) -> AgentResult:
-        self.trace = []
+        self._start_react("Find unread high-priority emails before answering.")
         emails = self._call("search_email", {"unread_only": True, "priority": "high"})
 
         if not emails:
-            return AgentResult("Important Emails", ["No high-priority unread email found."], self.trace)
+            return self._finish("Important Emails", ["No high-priority unread email found."])
 
         bullets = []
         for email in emails:
             bullets.append(f"{email['sender']}: {email['subject']} due by {email['deadline']}.")
 
-        return AgentResult("Important Emails", bullets, self.trace)
+        return self._finish("Important Emails", bullets)
 
     def open_todos(self) -> AgentResult:
-        self.trace = []
+        self._start_react("List open todos so the response reflects current task state.")
         todos = self._call("list_todos", {"include_done": False})
 
         if not todos:
-            return AgentResult("Open Todos", ["No open todo found."], self.trace)
+            return self._finish("Open Todos", ["No open todo found."])
 
         bullets = [
             f"{todo['title']} due {todo['due']} priority {todo['priority']}."
             for todo in todos
         ]
-        return AgentResult("Open Todos", bullets, self.trace)
+        return self._finish("Open Todos", bullets)
 
     def today_calendar(self) -> AgentResult:
-        self.trace = []
+        self._start_react("Load today's date, then inspect the calendar for that date.")
         memory = self._call("load_memory", {})
         events = self._call("list_calendar_events", {"date": memory["today"]})
 
         if not events:
-            return AgentResult("Today's Calendar", ["No calendar event found today."], self.trace)
+            return self._finish("Today's Calendar", ["No calendar event found today."])
 
         bullets = [
             f"{event['start']}-{event['end']} {event['title']}"
             for event in events
         ]
-        return AgentResult("Today's Calendar", bullets, self.trace)
+        return self._finish("Today's Calendar", bullets)
 
     def calendar_conflicts(self) -> AgentResult:
-        self.trace = []
+        self._start_react("Load today's date, then check whether any calendar events overlap.")
         memory = self._call("load_memory", {})
         conflicts = self._call("detect_calendar_conflicts", {"date": memory["today"]})
 
         if not conflicts:
-            return AgentResult("Calendar Conflicts", ["No calendar conflict found today."], self.trace)
+            return self._finish("Calendar Conflicts", ["No calendar conflict found today."])
 
         bullets = [
             f"{conflict['first']['title']} overlaps with {conflict['second']['title']}."
             for conflict in conflicts
         ]
-        return AgentResult("Calendar Conflicts", bullets, self.trace)
+        return self._finish("Calendar Conflicts", bullets)
 
     def complete_todo(self, todo_id: int) -> AgentResult:
-        self.trace = []
+        self._start_react("Complete the requested todo while respecting dry-run mode.")
         todo = self._call("complete_todo", {"todo_id": todo_id})
         action = "Todo would be completed" if todo.get("dry_run") else "Todo completed"
-        return AgentResult("Todo Completed", [f"{action}: {todo['title']}."], self.trace)
+        return self._finish("Todo Completed", [f"{action}: {todo['title']}."])
 
     def reschedule_event(self, event_id: str, new_start: str, new_end: str) -> AgentResult:
-        self.trace = []
+        self._start_react("Move the requested calendar event while respecting dry-run mode.")
         event = self._call(
             "reschedule_event",
             {"event_id": event_id, "new_start": new_start, "new_end": new_end},
         )
-        return AgentResult(
+        return self._finish(
             "Event Rescheduled",
             [
                 (
@@ -135,11 +136,10 @@ class WorkflowAgent:
                 )
                 + f": {event['title']} to {event['start']}-{event['end']}."
             ],
-            self.trace,
         )
 
     def daily_brief(self) -> AgentResult:
-        self.trace = []
+        self._start_react("Gather memory, email, calendar, todos, and conflicts for a daily brief.")
         memory = self._call("load_memory", {})
         important_emails = self._call("search_email", {"unread_only": True, "priority": "high"})
         events = self._call("list_calendar_events", {"date": memory["today"]})
@@ -185,7 +185,7 @@ class WorkflowAgent:
         if not bullets:
             bullets.append("No urgent work found today.")
 
-        return AgentResult("Daily Brief", bullets, self.trace)
+        return self._finish("Daily Brief", bullets)
 
     def _call(self, tool_name: str, arguments: Dict[str, Any]) -> Any:
         if tool_name == "load_memory":
@@ -195,4 +195,38 @@ class WorkflowAgent:
             result = tool(**arguments)
 
         self.trace.append(ToolCall(tool_name, arguments, result))
+        self.react_steps.append(
+            ReActStep(
+                kind="action",
+                content=f"Call {tool_name}.",
+                tool_name=tool_name,
+                arguments=arguments,
+            )
+        )
+        self.react_steps.append(
+            ReActStep(
+                kind="observation",
+                content=f"{tool_name} returned {self._summarize_observation(result)}.",
+                tool_name=tool_name,
+                observation=result,
+            )
+        )
         return result
+
+    def _start_react(self, thought: str) -> None:
+        self.trace = []
+        self.react_steps = [ReActStep(kind="thought", content=thought)]
+
+    def _finish(self, title: str, bullets: List[str]) -> AgentResult:
+        self.react_steps.append(
+            ReActStep(kind="final", content=f"Return {title} with {len(bullets)} bullet(s).")
+        )
+        return AgentResult(title, bullets, list(self.trace), list(self.react_steps))
+
+    @staticmethod
+    def _summarize_observation(result: Any) -> str:
+        if isinstance(result, list):
+            return f"{len(result)} item(s)"
+        if isinstance(result, dict):
+            return f"{len(result)} field(s)"
+        return "a value"
