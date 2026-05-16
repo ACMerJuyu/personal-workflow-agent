@@ -4,6 +4,29 @@ A lightweight personal AI assistant prototype for coordinating email, calendar, 
 
 This project is a portfolio-ready mini version of a next-generation personal assistant. It reads daily work context, calls tools, detects conflicts, drafts replies, produces a daily brief, and persists agent runs with tool traces.
 
+## Demo Flow
+
+1. Start the API:
+
+```bash
+python -m uvicorn api:app --reload --port 8010
+```
+
+2. Open the dashboard:
+
+```text
+http://127.0.0.1:8010/dashboard
+```
+
+3. Click `Check Conflicts` to show ReAct-style reasoning and tool calls.
+4. Click `Reschedule Event` to create a pending action in dry-run mode.
+5. Click `Approve` to commit the proposed calendar change.
+6. Run evals:
+
+```bash
+python scripts/run_evals.py
+```
+
 ## Why This Project
 
 Modern personal assistants should not only chat. They should coordinate across tools:

@@ -37,6 +37,8 @@ class APITest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("Agent Dashboard", response.text)
         self.assertIn("Planner", response.text)
+        self.assertIn("Quick Commands", response.text)
+        self.assertIn("System Capabilities", response.text)
 
     def test_dashboard_static_assets(self):
         response = self.client.get("/static/app.js")

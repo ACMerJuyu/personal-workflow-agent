@@ -16,6 +16,7 @@ const pendingCountEl = document.querySelector("#pending-count");
 const pendingActionsListEl = document.querySelector("#pending-actions-list");
 const historyListEl = document.querySelector("#history-list");
 const refreshHistoryButton = document.querySelector("#refresh-history");
+const quickCommandButtons = document.querySelectorAll("[data-command]");
 
 async function api(path, options = {}) {
   const response = await fetch(path, {
@@ -255,6 +256,12 @@ messageInput.addEventListener("keydown", (event) => {
   }
 });
 refreshHistoryButton.addEventListener("click", refreshData);
+quickCommandButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    messageInput.value = button.dataset.command;
+    runAgent();
+  });
+});
 pendingActionsListEl.addEventListener("click", async (event) => {
   const button = event.target.closest("button[data-action]");
   if (!button) {
