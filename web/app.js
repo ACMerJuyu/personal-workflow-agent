@@ -1,5 +1,6 @@
 const statusEl = document.querySelector("#api-status");
 const messageInput = document.querySelector("#message");
+const plannerInput = document.querySelector("#planner");
 const commitInput = document.querySelector("#commit");
 const resetInput = document.querySelector("#reset-db");
 const runButton = document.querySelector("#run-button");
@@ -52,6 +53,7 @@ async function runAgent() {
       method: "POST",
       body: JSON.stringify({
         message: messageInput.value,
+        planner: plannerInput.value,
         commit: commitInput.checked,
         reset_db: resetInput.checked,
       }),
@@ -69,7 +71,7 @@ async function runAgent() {
 }
 
 function renderResult(payload) {
-  runIdEl.textContent = `Run #${payload.run_id} | ${payload.mode} | ${payload.intent}`;
+  runIdEl.textContent = `Run #${payload.run_id} | ${payload.mode} | ${payload.intent} | ${payload.planner_mode}`;
   resultTitleEl.textContent = payload.title;
   resultBulletsEl.innerHTML = payload.bullets
     .map((bullet) => `<li>${escapeHtml(bullet)}</li>`)

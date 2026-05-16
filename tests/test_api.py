@@ -36,6 +36,7 @@ class APITest(unittest.TestCase):
         response = self.client.get("/dashboard")
         self.assertEqual(response.status_code, 200)
         self.assertIn("Agent Dashboard", response.text)
+        self.assertIn("Planner", response.text)
 
     def test_dashboard_static_assets(self):
         response = self.client.get("/static/app.js")
@@ -53,6 +54,7 @@ class APITest(unittest.TestCase):
         self.assertEqual(payload["title"], "Important Emails")
         self.assertGreaterEqual(payload["run_id"], 1)
         self.assertEqual(payload["intent"], "important_emails")
+        self.assertEqual(payload["planner_mode"], "rule-based")
         self.assertEqual(payload["trace"][0]["name"], "search_email")
         self.assertEqual(payload["react_steps"][0]["kind"], "thought")
         self.assertIn("action", [step["kind"] for step in payload["react_steps"]])

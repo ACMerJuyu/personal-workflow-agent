@@ -40,6 +40,7 @@ class AgentResult:
     bullets: List[str]
     trace: List[ToolCall] = field(default_factory=list)
     react_steps: List[ReActStep] = field(default_factory=list)
+    planner_mode: str = "rule-based"
 
     def to_text(self) -> str:
         lines = [self.title]

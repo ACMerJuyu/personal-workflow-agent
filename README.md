@@ -32,6 +32,7 @@ This repository demonstrates an agent loop with tool calling, structured outputs
 - Provides a simple browser dashboard
 - Shows a ReAct-style timeline for agent reasoning and tool use
 - Requires approval before dry-run write actions are committed
+- Supports rule-based and optional OpenAI tool-calling planners
 
 ## Project Structure
 
@@ -127,6 +128,37 @@ Core components:
 - `models.py`: defines result and trace structures
 
 The current implementation is deterministic and rule-based. This makes it easy to test. A future version can replace the router/planner with an LLM tool-calling planner while keeping the same tools and storage layer.
+
+## Planner Modes
+
+The project supports two planner styles:
+
+| Planner | Purpose |
+| --- | --- |
+| `rule-based` | Deterministic planner used by default fallback and tests |
+| `openai` | Optional OpenAI Responses API tool-calling planner |
+| `auto` | Try OpenAI when configured, otherwise fall back to rule-based |
+
+The rule-based planner keeps the project runnable without an API key. The OpenAI planner uses the same tool layer, dry-run behavior, ReAct timeline, SQLite persistence, and approval workflow.
+
+Use the OpenAI planner through the API:
+
+```json
+{
+  "message": "Show my open todos",
+  "planner": "openai",
+  "reset_db": true
+}
+```
+
+Required environment variables:
+
+```bash
+OPENAI_API_KEY=your_api_key
+OPENAI_MODEL=gpt-4.1-mini
+```
+
+The OpenAI dependency is optional. If the SDK or API key is missing, `auto` and `openai` requests safely fall back to the rule-based planner.
 
 ## Conversational Router
 
@@ -311,7 +343,7 @@ Example request:
 ```bash
 curl -X POST http://127.0.0.1:8010/agent/chat ^
   -H "Content-Type: application/json" ^
-  -d "{\"message\":\"Do I have calendar conflicts today?\",\"commit\":false,\"reset_db\":true}"
+  -d "{\"message\":\"Do I have calendar conflicts today?\",\"planner\":\"auto\",\"commit\":false,\"reset_db\":true}"
 ```
 
 Example response shape:
@@ -329,7 +361,8 @@ Example response shape:
     }
   ],
   "mode": "dry-run",
-  "intent": "calendar_conflicts"
+  "intent": "calendar_conflicts",
+  "planner_mode": "rule-based"
 }
 ```
 

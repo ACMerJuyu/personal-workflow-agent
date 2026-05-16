@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from agent.memory import UserMemory
 from agent.models import AgentResult
+from agent.openai_planner import OpenAIToolCallingPlanner, PlannerUnavailable
 from agent.planner import WorkflowAgent
 from agent.storage import SQLiteStorage
 from agent.tools import WorkflowTools
@@ -29,6 +30,7 @@ class ChatRequest(BaseModel):
     message: str
     commit: bool = False
     reset_db: bool = False
+    planner: str = "auto"
 
 
 class AgentResponse(BaseModel):
@@ -39,6 +41,7 @@ class AgentResponse(BaseModel):
     react_steps: List[Dict[str, Any]]
     mode: str
     intent: str
+    planner_mode: str
 
 
 def get_storage(reset_db: bool = False) -> SQLiteStorage:
@@ -53,6 +56,21 @@ def build_agent(storage: SQLiteStorage, commit: bool = False) -> WorkflowAgent:
         tools=WorkflowTools(mode=mode, storage=storage),
         memory=UserMemory(storage=storage),
     )
+
+
+def run_chat_with_planner(storage: SQLiteStorage, message: str, commit: bool, planner: str) -> AgentResult:
+    mode = "commit" if commit else "dry-run"
+    tools = WorkflowTools(mode=mode, storage=storage)
+    memory = UserMemory(storage=storage)
+
+    if planner in {"auto", "openai"}:
+        try:
+            return OpenAIToolCallingPlanner(tools=tools, memory=memory).chat(message)
+        except PlannerUnavailable:
+            if planner == "openai":
+                pass
+
+    return WorkflowAgent(tools=tools, memory=memory).chat(message)
 
 
 def response_from_result(
@@ -73,6 +91,7 @@ def response_from_result(
         react_steps=[step.to_dict() for step in result.react_steps],
         mode=mode,
         intent=intent,
+        planner_mode=result.planner_mode,
     )
 
 
@@ -136,9 +155,8 @@ def health() -> Dict[str, str]:
 @app.post("/agent/chat", response_model=AgentResponse)
 def chat(request: ChatRequest) -> AgentResponse:
     storage = get_storage(reset_db=request.reset_db)
-    agent = build_agent(storage, commit=request.commit)
-    result = agent.chat(request.message)
-    intent = agent.router.route(request.message).intent
+    result = run_chat_with_planner(storage, request.message, request.commit, request.planner)
+    intent = WorkflowAgent().router.route(request.message).intent
     mode = "commit" if request.commit else "dry-run"
     return response_from_result(storage, result, request.message, intent, mode)
 
