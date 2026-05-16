@@ -1,6 +1,8 @@
 import json
 import os
-from typing import Any, Dict, List, Optional
+import urllib.error
+import urllib.request
+from typing import Any, Callable, Dict, List, Optional
 
 from agent.memory import UserMemory
 from agent.models import AgentResult, ReActStep, ToolCall
@@ -9,6 +11,49 @@ from agent.tools import WorkflowTools
 
 class PlannerUnavailable(RuntimeError):
     pass
+
+
+class OpenAIResponsesHTTPClient:
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str = "https://api.openai.com/v1",
+        timeout: int = 60,
+        transport: Optional[Callable[[str, Dict[str, str], Dict[str, Any], int], Dict[str, Any]]] = None,
+    ):
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        self.transport = transport or self._post_json
+        self.responses = self
+
+    def create(self, **payload: Any) -> Dict[str, Any]:
+        return self.transport(
+            f"{self.base_url}/responses",
+            {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
+            },
+            payload,
+            self.timeout,
+        )
+
+    @staticmethod
+    def _post_json(url: str, headers: Dict[str, str], payload: Dict[str, Any], timeout: int) -> Dict[str, Any]:
+        request = urllib.request.Request(
+            url,
+            data=json.dumps(payload).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=timeout) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as error:
+            detail = error.read().decode("utf-8", errors="replace")
+            raise PlannerUnavailable(f"OpenAI Responses API error: {error.code} {detail}") from error
+        except urllib.error.URLError as error:
+            raise PlannerUnavailable(f"OpenAI Responses API unavailable: {error.reason}") from error
 
 
 class OpenAIToolCallingPlanner:
@@ -47,38 +92,45 @@ class OpenAIToolCallingPlanner:
 
         function_outputs = []
         for call in self._function_calls(response):
-            arguments = json.loads(call.arguments or "{}")
-            result = self._execute_tool(call.name, arguments)
-            self.trace.append(ToolCall(call.name, arguments, result))
+            tool_name = self._get(call, "name")
+            call_id = self._get(call, "call_id")
+            arguments = json.loads(self._get(call, "arguments", "{}") or "{}")
+            result = self._execute_tool(tool_name, arguments)
+            self.trace.append(ToolCall(tool_name, arguments, result))
             self.react_steps.append(
                 ReActStep(
                     kind="action",
-                    content=f"OpenAI planner selected {call.name}.",
-                    tool_name=call.name,
+                    content=f"OpenAI planner selected {tool_name}.",
+                    tool_name=tool_name,
                     arguments=arguments,
                 )
             )
             self.react_steps.append(
                 ReActStep(
                     kind="observation",
-                    content=f"{call.name} returned {self._summarize_observation(result)}.",
-                    tool_name=call.name,
+                    content=f"{tool_name} returned {self._summarize_observation(result)}.",
+                    tool_name=tool_name,
                     observation=result,
                 )
             )
             function_outputs.append(
                 {
                     "type": "function_call_output",
-                    "call_id": call.call_id,
+                    "call_id": call_id,
                     "output": json.dumps(result, ensure_ascii=False),
                 }
             )
 
         final_text = self._output_text(response)
         if function_outputs:
+            conversation_input = (
+                self._initial_input(message)
+                + self._serializable_output_items(response)
+                + function_outputs
+            )
             final_response = self.client.responses.create(
                 model=self.model,
-                input=self._initial_input(message) + function_outputs,
+                input=conversation_input,
                 tools=self.tool_schemas(),
             )
             final_text = self._output_text(final_response) or final_text
@@ -96,12 +148,13 @@ class OpenAIToolCallingPlanner:
         )
 
     def _build_client(self) -> Any:
-        if not os.environ.get("OPENAI_API_KEY"):
+        api_key = os.environ.get("OPENAI_API_KEY")
+        if not api_key:
             raise PlannerUnavailable("OPENAI_API_KEY is not set")
         try:
             from openai import OpenAI
-        except ImportError as error:
-            raise PlannerUnavailable("openai package is not installed") from error
+        except ImportError:
+            return OpenAIResponsesHTTPClient(api_key=api_key)
         return OpenAI()
 
     def _initial_input(self, message: str) -> List[Dict[str, str]]:
@@ -124,11 +177,47 @@ class OpenAIToolCallingPlanner:
 
     @staticmethod
     def _function_calls(response: Any) -> List[Any]:
-        return [item for item in getattr(response, "output", []) if getattr(item, "type", "") == "function_call"]
+        return [
+            item
+            for item in OpenAIToolCallingPlanner._get(response, "output", [])
+            if OpenAIToolCallingPlanner._get(item, "type", "") == "function_call"
+        ]
+
+    @staticmethod
+    def _serializable_output_items(response: Any) -> List[Dict[str, Any]]:
+        items = []
+        for item in OpenAIToolCallingPlanner._get(response, "output", []):
+            if isinstance(item, dict):
+                items.append(item)
+            elif hasattr(item, "model_dump"):
+                items.append(item.model_dump())
+            elif hasattr(item, "dict"):
+                items.append(item.dict())
+            elif hasattr(item, "__dict__"):
+                items.append(dict(item.__dict__))
+        return items
 
     @staticmethod
     def _output_text(response: Any) -> str:
-        return getattr(response, "output_text", "") or ""
+        output_text = OpenAIToolCallingPlanner._get(response, "output_text", "")
+        if output_text:
+            return output_text
+
+        for item in OpenAIToolCallingPlanner._get(response, "output", []):
+            if OpenAIToolCallingPlanner._get(item, "type", "") != "message":
+                continue
+            for content in OpenAIToolCallingPlanner._get(item, "content", []):
+                if OpenAIToolCallingPlanner._get(content, "type", "") == "output_text":
+                    text = OpenAIToolCallingPlanner._get(content, "text", "")
+                    if text:
+                        return text
+        return ""
+
+    @staticmethod
+    def _get(value: Any, key: str, default: Any = None) -> Any:
+        if isinstance(value, dict):
+            return value.get(key, default)
+        return getattr(value, key, default)
 
     @staticmethod
     def _bullets_from_text(text: str) -> List[str]:

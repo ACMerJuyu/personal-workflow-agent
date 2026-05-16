@@ -185,6 +185,22 @@ python scripts/run_evals.py
 
 CI runs the same tests and evals on every push through `.github/workflows/ci.yml`.
 
+## OpenAI Planner Smoke Test
+
+The OpenAI planner can run through the official Responses API when `OPENAI_API_KEY` is configured. The project also includes a standard-library HTTP fallback, so the planner is not limited to the Python SDK.
+
+PowerShell:
+
+```powershell
+$env:OPENAI_API_KEY="your_api_key"
+$env:OPENAI_MODEL="gpt-4.1-mini"
+py scripts/smoke_openai_planner.py
+```
+
+Script path: `scripts/smoke_openai_planner.py`
+
+The `openai` package is listed as a Python 3.8+ optional dependency in `requirements.txt`. On Python 3.7, the project still runs through the rule-based planner and the HTTP fallback path.
+
 ## Agent Design
 
 The agent follows a simple loop:

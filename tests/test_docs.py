@@ -15,6 +15,7 @@ class DocsTest(unittest.TestCase):
             ".env.example",
             "scripts/dev.ps1",
             "scripts/check.ps1",
+            "scripts/smoke_openai_planner.py",
             ".github/workflows/ci.yml",
         ]
 
@@ -38,6 +39,7 @@ class DocsTest(unittest.TestCase):
 
         self.assertIn("scripts/dev.ps1", readme)
         self.assertIn("scripts/check.ps1", readme)
+        self.assertIn("scripts/smoke_openai_planner.py", readme)
         self.assertIn(".env.example", readme)
 
 
