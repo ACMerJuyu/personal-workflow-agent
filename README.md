@@ -34,6 +34,7 @@ This repository demonstrates an agent loop with tool calling, structured outputs
 - Requires approval before dry-run write actions are committed
 - Supports rule-based and optional OpenAI tool-calling planners
 - Includes eval cases for agent decision quality
+- Uses adapter boundaries for email, calendar, and todo data sources
 
 ## Project Structure
 
@@ -44,6 +45,7 @@ personal-workflow-agent/
   requirements.txt
   agent/
     __init__.py
+    adapters.py
     memory.py
     models.py
     parser.py
@@ -130,11 +132,48 @@ Core components:
 - `router.py`: classifies user intent
 - `parser.py`: extracts ids and time ranges
 - `tools.py`: executes email, calendar, todo, and reply tools
+- `adapters.py`: defines data-source boundaries for email, calendar, and todos
 - `planner.py`: orchestrates tool calls and returns `AgentResult`
 - `storage.py`: persists product data, agent runs, and tool calls
 - `models.py`: defines result and trace structures
 
 The current implementation is deterministic and rule-based. This makes it easy to test. A future version can replace the router/planner with an LLM tool-calling planner while keeping the same tools and storage layer.
+
+## Adapter Layer
+
+The tool layer is separated from concrete data sources through adapters:
+
+```text
+WorkflowTools
+  -> EmailAdapter
+  -> CalendarAdapter
+  -> TodoAdapter
+```
+
+The current implementation ships SQLite-backed adapters:
+
+```text
+SQLiteEmailAdapter
+SQLiteCalendarAdapter
+SQLiteTodoAdapter
+```
+
+This keeps planner and tool logic independent from where the data comes from. Future integrations can add adapters such as:
+
+```text
+GmailAdapter
+GoogleCalendarAdapter
+NotionTodoAdapter
+```
+
+The important boundary is:
+
+```text
+planner decides intent and actions
+tools expose capabilities
+adapters connect those capabilities to external systems
+storage persists local state and audit trails
+```
 
 ## Planner Modes
 
@@ -381,6 +420,7 @@ HTTP request
   -> WorkflowAgent
   -> Router / Parser
   -> Tools
+  -> Adapters
   -> SQLiteStorage
   -> AgentResult + Tool Trace
   -> JSON response

@@ -63,6 +63,16 @@ class APITest(unittest.TestCase):
         self.assertGreaterEqual(len(history), 1)
         self.assertEqual(history[0]["final_title"], "Important Emails")
 
+    def test_agent_uses_sqlite_adapters_when_storage_is_configured(self):
+        from api import build_agent, get_storage
+
+        storage = get_storage(reset_db=True)
+        agent = build_agent(storage)
+
+        self.assertIsNotNone(agent.tools.email_adapter)
+        self.assertIsNotNone(agent.tools.calendar_adapter)
+        self.assertIsNotNone(agent.tools.todo_adapter)
+
     def test_dashboard_mentions_react_timeline(self):
         response = self.client.get("/dashboard")
         self.assertEqual(response.status_code, 200)
