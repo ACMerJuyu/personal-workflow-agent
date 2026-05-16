@@ -100,6 +100,19 @@ personal-workflow-agent/
 
 ## Quick Start
 
+Clone and enter the project:
+
+```bash
+git clone https://github.com/ACMerJuyu/personal-workflow-agent.git
+cd personal-workflow-agent
+```
+
+Create a local environment file:
+
+```bash
+cp .env.example .env
+```
+
 Install dependencies:
 
 ```bash
@@ -111,6 +124,34 @@ Initialize SQLite:
 ```bash
 python scripts/init_db.py
 ```
+
+Start the dashboard:
+
+```bash
+python -m uvicorn api:app --reload --port 8010
+```
+
+Open:
+
+```text
+http://127.0.0.1:8010/dashboard
+```
+
+On Windows PowerShell, you can use the helper script:
+
+```powershell
+.\scripts\dev.ps1
+```
+
+Script path: `scripts/dev.ps1`
+
+Run the full local check:
+
+```powershell
+.\scripts\check.ps1
+```
+
+Script path: `scripts/check.ps1`
 
 Run CLI examples:
 
@@ -141,6 +182,8 @@ Run evals:
 ```bash
 python scripts/run_evals.py
 ```
+
+CI runs the same tests and evals on every push through `.github/workflows/ci.yml`.
 
 ## Agent Design
 
