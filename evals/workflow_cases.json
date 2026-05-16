@@ -1,0 +1,50 @@
+[
+  {
+    "id": "important-emails",
+    "message": "Any important emails?",
+    "expected_intent": "important_emails",
+    "expected_title": "Important Emails",
+    "expected_tools": ["search_email"],
+    "expected_pending_actions": 0
+  },
+  {
+    "id": "today-calendar",
+    "message": "What is on my calendar today?",
+    "expected_intent": "today_calendar",
+    "expected_title": "Today's Calendar",
+    "expected_tools": ["load_memory", "list_calendar_events"],
+    "expected_pending_actions": 0
+  },
+  {
+    "id": "calendar-conflicts",
+    "message": "Do I have calendar conflicts today?",
+    "expected_intent": "calendar_conflicts",
+    "expected_title": "Calendar Conflicts",
+    "expected_tools": ["load_memory", "detect_calendar_conflicts"],
+    "expected_pending_actions": 0
+  },
+  {
+    "id": "open-todos",
+    "message": "Show my open todos",
+    "expected_intent": "open_todos",
+    "expected_title": "Open Todos",
+    "expected_tools": ["list_todos"],
+    "expected_pending_actions": 0
+  },
+  {
+    "id": "reschedule-event",
+    "message": "Move event-001 to 16:00-17:00",
+    "expected_intent": "reschedule_event",
+    "expected_title": "Event Rescheduled",
+    "expected_tools": ["reschedule_event"],
+    "expected_pending_actions": 1
+  },
+  {
+    "id": "complete-todo",
+    "message": "Complete todo 1",
+    "expected_intent": "complete_todo",
+    "expected_title": "Todo Completed",
+    "expected_tools": ["complete_todo"],
+    "expected_pending_actions": 1
+  }
+]

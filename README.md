@@ -33,6 +33,7 @@ This repository demonstrates an agent loop with tool calling, structured outputs
 - Shows a ReAct-style timeline for agent reasoning and tool use
 - Requires approval before dry-run write actions are committed
 - Supports rule-based and optional OpenAI tool-calling planners
+- Includes eval cases for agent decision quality
 
 ## Project Structure
 
@@ -108,6 +109,12 @@ Run tests:
 
 ```bash
 python -m unittest discover -s tests
+```
+
+Run evals:
+
+```bash
+python scripts/run_evals.py
 ```
 
 ## Agent Design
@@ -393,6 +400,29 @@ HTTP request
 | `complete_todo` | Mark a todo as done |
 | `draft_reply` | Generate a reply draft |
 | `daily_brief` | Summarize important work items |
+
+## Evals
+
+The eval suite checks agent behavior across common workflow requests:
+
+- Expected intent
+- Expected final title
+- Expected tool calls
+- Expected pending action count
+
+Eval cases live in:
+
+```text
+evals/workflow_cases.json
+```
+
+Run them with:
+
+```bash
+python scripts/run_evals.py
+```
+
+This gives the project an interview-friendly quality story: agent behavior is not only manually demoed, it is measured against repeatable cases.
 
 ## Roadmap
 
